@@ -96,15 +96,3 @@ This project helped me learn how production-grade AI applications retrieve infor
 
 ---
 
-## Running Locally
-
-```bash
-git clone <repo-url>
-
-python -m venv venv
-
-venv\Scripts\activate
-
-pip install -r requirements.txt
-
-streamlit run app.py
