@@ -19,7 +19,7 @@ def main():
     with open("data/processed/chunks.json", "r", encoding="utf-8") as f:
         chunks = json.load(f)
 
-    print(f"Loaded {len(chunks)} chunks from Day 2")
+    print(f"Loaded {len(chunks)} chunks ")
 
     # Extract text and metadata
     texts = [chunk["text"] for chunk in chunks]
