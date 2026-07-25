@@ -2,7 +2,7 @@
 ESG Report Intelligence System - Streamlit Application
 
 Main entry point. Provides PDF upload, chat-based Q&A, and cited
-answers powered by the Day 3/4 RAG pipeline (FAISS + Gemini).
+answers powered by the RAG pipeline (FAISS + Gemini).
 
 Run with: streamlit run app.py
 """
@@ -31,6 +31,49 @@ st.set_page_config(
     layout="wide"
 )
 
+
+# ---------------- Styling ----------------
+
+def load_css():
+    css_path = Path("assets/style.css")
+    if css_path.exists():
+        st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
+
+
+def render_hero():
+    st.markdown(
+        """
+        <div class="esg-hero">
+            <div class="esg-hero-eyebrow">Retrieval-Augmented Analysis · 8 Reports · 5 Companies</div>
+            <div class="esg-hero-title">ESG Report Intelligence</div>
+            <div class="esg-hero-sub">
+                Ask questions across sustainability reports from Apple, Google, Microsoft,
+                Reliance, and Tata. Every answer is grounded in the source text and cited
+                by document and page.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def render_citation_chips(citations):
+    """Render citations as styled monospace tags rather than a plain list."""
+    if not citations:
+        st.markdown(
+            '<div class="esg-no-citation">⚠ no sources cited — answer may not be grounded</div>',
+            unsafe_allow_html=True
+        )
+        return
+
+    chips = "".join(
+        f'<span class="esg-citation-chip">{c["source"]} '
+        f'<span class="esg-page">p.{c["page"]}</span></span>'
+        for c in citations
+    )
+    st.markdown(f'<div class="esg-citation-row">{chips}</div>', unsafe_allow_html=True)
+
+
 # ---------------- Session State ----------------
 
 if "vector_store" not in st.session_state:
@@ -38,7 +81,7 @@ if "vector_store" not in st.session_state:
 if "rag_pipeline" not in st.session_state:
     st.session_state.rag_pipeline = None
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+    st.session_state.chat_history = []  # list of dicts: role, content, citations
 if "k_value" not in st.session_state:
     st.session_state.k_value = 5
 
@@ -54,7 +97,7 @@ def load_embedding_generator():
 # ---------------- Pipeline Functions ----------------
 
 def process_uploaded_pdfs(uploaded_files, embedding_generator):
-    """Run the full Day 1-3 pipeline on newly uploaded PDFs."""
+    """Run the full ingestion pipeline on newly uploaded PDFs."""
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +137,7 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
 
 
 def load_existing_database(embedding_generator):
-    """Load the vector database already built on Day 3, if present."""
+    """Load a previously built vector database, if present."""
     if not os.path.exists("data/vector_db/index.faiss"):
         st.error("No existing database found. Upload and process PDFs first.")
         return
@@ -115,9 +158,8 @@ def load_existing_database(embedding_generator):
 # ---------------- UI Sections ----------------
 
 def render_sidebar(embedding_generator):
-    """Render the sidebar: upload, existing DB loader, and settings."""
     with st.sidebar:
-        st.header("📂 Document Management")
+        st.markdown("### 📂 Document Management")
 
         uploaded_files = st.file_uploader(
             "Upload ESG Reports (PDF)",
@@ -131,37 +173,43 @@ def render_sidebar(embedding_generator):
         if st.button("Load Existing Database"):
             load_existing_database(embedding_generator)
 
-        st.divider()
+        st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
 
         if st.session_state.vector_store:
-            st.success(f"✅ {st.session_state.vector_store.index.ntotal} chunks indexed")
+            st.markdown(
+                f'<span class="esg-status-pill">{st.session_state.vector_store.index.ntotal} chunks indexed</span>',
+                unsafe_allow_html=True
+            )
         else:
-            st.info("No documents loaded yet. Upload PDFs or load the existing database above.")
+            st.caption("No documents loaded yet. Upload PDFs or load the existing database above.")
 
-        st.divider()
-        st.header("⚙️ Settings")
+        st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
+        st.markdown("### ⚙️ Settings")
 
         st.session_state.k_value = st.slider(
-            "Number of source chunks to retrieve",
+            "Source chunks to retrieve",
             min_value=1, max_value=10, value=st.session_state.k_value,
             help="Higher values retrieve more context but may dilute focus."
         )
 
-        st.caption("Model: Gemini 1.5 Flash")
-        st.caption("Embedding: all-MiniLM-L6-v2 (384-dim)")
+        st.caption("Model · Gemini 1.5 Flash")
+        st.caption("Embedding · all-MiniLM-L6-v2 (384-dim)")
 
 
 def render_chat_interface():
     """Render chat history and handle new questions."""
     extractor = CitationExtractor()
 
-    # Replay chat history on every rerun
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            if message["role"] == "assistant":
+                render_citation_chips(message.get("citations", []))
 
     if query := st.chat_input("Ask a question about the ESG reports..."):
-        st.session_state.chat_history.append({"role": "user", "content": query})
+        st.session_state.chat_history.append(
+            {"role": "user", "content": query, "citations": []}
+        )
         with st.chat_message("user"):
             st.markdown(query)
 
@@ -171,57 +219,54 @@ def render_chat_interface():
                     result = st.session_state.rag_pipeline.query(
                         query, k=st.session_state.k_value
                     )
-                    formatted_answer = extractor.format_with_source_list(result["answer"])
-                    st.markdown(formatted_answer)
+                    answer_text = result["answer"]
+                    citations = extractor.extract_citations(answer_text)
 
-                    citations = extractor.extract_citations(result["answer"])
-                    if citations:
-                        st.caption(f"📚 {len(citations)} source(s) cited")
-                    else:
-                        st.caption("⚠️ No sources cited in this answer")
+                    st.markdown(answer_text)
+                    render_citation_chips(citations)
 
-                    with st.expander("📖 View retrieved source context"):
+                    with st.expander("🔍 View retrieved source context"):
                         st.text(result["context"])
 
                 except Exception as e:
-                    formatted_answer = f"⚠️ Something went wrong while generating an answer: {e}"
-                    st.error(formatted_answer)
+                    answer_text = f"⚠️ Something went wrong while generating an answer: {e}"
+                    citations = []
+                    st.error(answer_text)
 
-        st.session_state.chat_history.append({"role": "assistant", "content": formatted_answer})
+        st.session_state.chat_history.append(
+            {"role": "assistant", "content": answer_text, "citations": citations}
+        )
 
 
 # ---------------- Main App ----------------
 
 def main():
-    
+    load_css()
+
     if not os.getenv("GOOGLE_API_KEY"):
         st.error("⚠️ GOOGLE_API_KEY not found. Add it to your .env file and restart the app.")
         st.stop()
 
-    st.title("📄 ESG Report Intelligence System")
-    st.caption("Ask questions about ESG and sustainability reports, with cited answers.")
+    render_hero()
 
     embedding_generator = load_embedding_generator()
 
-    # Auto-load existing database on first run, if present
     if st.session_state.rag_pipeline is None and os.path.exists("data/vector_db/index.faiss"):
         load_existing_database(embedding_generator)
 
     render_sidebar(embedding_generator)
 
     if not st.session_state.rag_pipeline:
-        st.info(
-            "📄 Upload ESG PDF reports in the sidebar, or load your existing database, to get started."
-        )
-        st.markdown("""
-        ### Example questions you can ask once documents are loaded:
-
-        - What is the carbon neutrality target?
-        - How much renewable energy is being used?
-        - What are the water conservation efforts?
-        - Compare Apple and Google's approach to emissions reduction.
-        """)
-        return  # Nothing else to render until documents are loaded
+        st.markdown("👈 Upload ESG PDF reports in the sidebar, or load your existing database, to get started.")
+        st.markdown("**Example questions once documents are loaded:**")
+        for q in [
+            "What is the carbon neutrality target?",
+            "How much renewable energy is being used?",
+            "What are the water conservation efforts?",
+            "Compare Apple and Google's approach to emissions reduction.",
+        ]:
+            st.markdown(f'<div class="esg-example-card">{q}</div>', unsafe_allow_html=True)
+        return
 
     render_chat_interface()
 
