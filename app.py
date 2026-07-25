@@ -169,7 +169,30 @@ def main():
 
         return  # Nothing else to render until documents are loaded
 
-    render_chat_interface()
+    with st.chat_message("assistant"):
+    with st.spinner("Analyzing reports..."):
+
+        result = st.session_state.rag_pipeline.query(
+            query,
+            k=5
+        )
+
+        formatted_answer = extractor.format_with_source_list(
+            result["answer"]
+        )
+
+        st.markdown(formatted_answer)
+
+        # Check citations
+        citations = extractor.extract_citations(result["answer"])
+
+        if citations:
+            st.caption(f"📚 {len(citations)} source(s) cited")
+        else:
+            st.caption("⚠️ No sources cited in this answer")
+
+        with st.expander("📖 View retrieved source context"):
+            st.text(result["context"])
 
 def render_chat_interface():
     """Render chat history and handle new questions."""
