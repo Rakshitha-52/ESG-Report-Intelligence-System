@@ -29,9 +29,13 @@ RULES:
 1. Answer only using information found in the context above.
 2. If the answer is not in the context, respond exactly with:
    "I don't have enough information in the provided reports to answer this question."
-3. Cite every factual claim using the exact format [Source: filename, Page X].
+3.  Cite every factual claim using this exact format: [Source: filename, Page X]
+   Use ONE bracket per citation. If a fact appears in multiple documents,
+   write separate brackets like this: [Source: file1.pdf, Page 1] [Source: file2.pdf, Page 2]
+   Do NOT combine multiple sources into a single bracket with a semicolon.
 4. Do not use any outside knowledge about the company, even if you know it.
 5. Be specific - include exact numbers, percentages, and dates when available.
+6. Do not repeat the same fact twice in different words. State each point once.
 
 ANSWER:"""
 
