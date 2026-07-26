@@ -55,6 +55,8 @@ ANSWER:"""
         self.temperature = temperature
         self.model = genai.GenerativeModel(model_name)
 
+    
+
     def retrieve_context(self, question: str, k: int = 5) -> str:
         """
         Retrieve the top-k relevant chunks and format them into
@@ -62,6 +64,10 @@ ANSWER:"""
         """
         query_embedding = self.embedding_generator.embed_text(question)
         results = self.vector_store.search(query_embedding, k=k)
+
+
+        if	not	results:
+            return	"(No	documents	available	to	search.)"
 
         context_parts = []
         for idx, (text, metadata, distance) in enumerate(results, 1):
