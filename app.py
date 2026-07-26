@@ -196,46 +196,71 @@ def render_sidebar(embedding_generator):
         st.caption("Embedding · all-MiniLM-L6-v2 (384-dim)")
 
 
-def render_chat_interface():
-    """Render chat history and handle new questions."""
-    extractor = CitationExtractor()
+def render_sidebar(embedding_generator):
+    with st.sidebar:
+        st.markdown("### 📄 Document Management")
 
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            if message["role"] == "assistant":
-                render_citation_chips(message.get("citations", []))
-
-    if query := st.chat_input("Ask a question about the ESG reports..."):
-        st.session_state.chat_history.append(
-            {"role": "user", "content": query, "citations": []}
+        db_mode = st.radio(
+            "Vector database",
+            ["Load existing database", "Create new from uploads"],
+            index=0
         )
-        with st.chat_message("user"):
-            st.markdown(query)
 
-        with st.chat_message("assistant"):
-            with st.spinner("Analyzing reports..."):
-                try:
-                    result = st.session_state.rag_pipeline.query(
-                        query, k=st.session_state.k_value
-                    )
-                    answer_text = result["answer"]
-                    citations = extractor.extract_citations(answer_text)
+        if db_mode == "Create new from uploads":
+            uploaded_files = st.file_uploader(
+                "Upload ESG Reports (PDF)",
+                type=["pdf"],
+                accept_multiple_files=True
+            )
 
-                    st.markdown(answer_text)
-                    render_citation_chips(citations)
+            if uploaded_files and st.button(
+                "Process Documents",
+                type="primary"
+            ):
+                process_uploaded_pdfs(
+                    uploaded_files,
+                    embedding_generator
+                )
 
-                    with st.expander("🔍 View retrieved source context"):
-                        st.text(result["context"])
+        else:
+            if st.button(
+                "Load Existing Database",
+                type="primary"
+            ):
+                load_existing_database(embedding_generator)
 
-                except Exception as e:
-                    answer_text = f"⚠️ Something went wrong while generating an answer: {e}"
-                    citations = []
-                    st.error(answer_text)
-
-        st.session_state.chat_history.append(
-            {"role": "assistant", "content": answer_text, "citations": citations}
+        st.markdown(
+            '<hr class="esg-divider">',
+            unsafe_allow_html=True
         )
+
+        if st.session_state.vector_store:
+            st.markdown(
+                f'<span class="esg-status-pill">'
+                f'{st.session_state.vector_store.index.ntotal} chunks indexed'
+                f'</span>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.caption("No documents loaded yet.")
+
+        st.markdown(
+            '<hr class="esg-divider">',
+            unsafe_allow_html=True
+        )
+
+        st.markdown("### ⚙️ Settings")
+
+        st.session_state.k_value = st.slider(
+            "Source chunks to retrieve",
+            min_value=1,
+            max_value=10,
+            value=st.session_state.k_value,
+            help="Higher values retrieve more context but may dilute focus."
+        )
+
+        st.caption("Model · Gemini 1.5 Flash")
+        st.caption("Embedding · all-MiniLM-L6-v2 (384-dim)")
 
 
 # ---------------- Main App ----------------
