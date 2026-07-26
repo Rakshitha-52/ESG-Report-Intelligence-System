@@ -66,7 +66,7 @@ ANSWER:
         self,
         vector_store,
         embedding_generator,
-        model_name: str = "gemini-1.5-flash",
+        model_name: str = "gemini-2.5-flash",
     ):
         self.vector_store = vector_store
         self.embedding_generator = embedding_generator

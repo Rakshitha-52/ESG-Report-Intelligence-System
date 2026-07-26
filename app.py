@@ -14,6 +14,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 sys.path.append("src")
+from generation.comparison import ComparisonHandler
+
+
 
 from ingestion.pdf_loader import PDFLoader
 from ingestion.text_preprocessor import TextPreprocessor
@@ -31,8 +34,6 @@ st.set_page_config(
     layout="wide"
 )
 
-
-# ---------------- Styling ----------------
 
 def load_css():
     css_path = Path("assets/style.css")
@@ -58,7 +59,6 @@ def render_hero():
 
 
 def render_citation_chips(citations):
-    """Render citations as styled monospace tags rather than a plain list."""
     if not citations:
         st.markdown(
             '<div class="esg-no-citation">⚠ no sources cited — answer may not be grounded</div>',
@@ -74,30 +74,22 @@ def render_citation_chips(citations):
     st.markdown(f'<div class="esg-citation-row">{chips}</div>', unsafe_allow_html=True)
 
 
-# ---------------- Session State ----------------
-
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
 if "rag_pipeline" not in st.session_state:
     st.session_state.rag_pipeline = None
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []  # list of dicts: role, content, citations
+    st.session_state.chat_history = []
 if "k_value" not in st.session_state:
     st.session_state.k_value = 5
 
 
-# ---------------- Cached Resources ----------------
-
 @st.cache_resource
 def load_embedding_generator():
-    """Load the Sentence-BERT model once per session, not per rerun."""
     return EmbeddingGenerator()
 
 
-# ---------------- Pipeline Functions ----------------
-
 def process_uploaded_pdfs(uploaded_files, embedding_generator):
-    """Run the full ingestion pipeline on newly uploaded PDFs."""
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
 
@@ -137,7 +129,6 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
 
 
 def load_existing_database(embedding_generator):
-    """Load a previously built vector database, if present."""
     if not os.path.exists("data/vector_db/index.faiss"):
         st.error("No existing database found. Upload and process PDFs first.")
         return
@@ -153,47 +144,6 @@ def load_existing_database(embedding_generator):
     )
 
     st.success(f"✅ Loaded {vector_store.index.ntotal} chunks from existing database")
-
-
-# ---------------- UI Sections ----------------
-
-def render_sidebar(embedding_generator):
-    with st.sidebar:
-        st.markdown("### 📂 Document Management")
-
-        uploaded_files = st.file_uploader(
-            "Upload ESG Reports (PDF)",
-            type=["pdf"],
-            accept_multiple_files=True
-        )
-
-        if uploaded_files and st.button("Process Documents", type="primary"):
-            process_uploaded_pdfs(uploaded_files, embedding_generator)
-
-        if st.button("Load Existing Database"):
-            load_existing_database(embedding_generator)
-
-        st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
-
-        if st.session_state.vector_store:
-            st.markdown(
-                f'<span class="esg-status-pill">{st.session_state.vector_store.index.ntotal} chunks indexed</span>',
-                unsafe_allow_html=True
-            )
-        else:
-            st.caption("No documents loaded yet. Upload PDFs or load the existing database above.")
-
-        st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
-        st.markdown("### ⚙️ Settings")
-
-        st.session_state.k_value = st.slider(
-            "Source chunks to retrieve",
-            min_value=1, max_value=10, value=st.session_state.k_value,
-            help="Higher values retrieve more context but may dilute focus."
-        )
-
-        st.caption("Model · Gemini 1.5 Flash")
-        st.caption("Embedding · all-MiniLM-L6-v2 (384-dim)")
 
 
 def render_sidebar(embedding_generator):
@@ -213,26 +163,14 @@ def render_sidebar(embedding_generator):
                 accept_multiple_files=True
             )
 
-            if uploaded_files and st.button(
-                "Process Documents",
-                type="primary"
-            ):
-                process_uploaded_pdfs(
-                    uploaded_files,
-                    embedding_generator
-                )
+            if uploaded_files and st.button("Process Documents", type="primary"):
+                process_uploaded_pdfs(uploaded_files, embedding_generator)
 
         else:
-            if st.button(
-                "Load Existing Database",
-                type="primary"
-            ):
+            if st.button("Load Existing Database", type="primary"):
                 load_existing_database(embedding_generator)
 
-        st.markdown(
-            '<hr class="esg-divider">',
-            unsafe_allow_html=True
-        )
+        st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
 
         if st.session_state.vector_store:
             st.markdown(
@@ -244,10 +182,7 @@ def render_sidebar(embedding_generator):
         else:
             st.caption("No documents loaded yet.")
 
-        st.markdown(
-            '<hr class="esg-divider">',
-            unsafe_allow_html=True
-        )
+        st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
 
         st.markdown("### ⚙️ Settings")
 
@@ -259,11 +194,64 @@ def render_sidebar(embedding_generator):
             help="Higher values retrieve more context but may dilute focus."
         )
 
-        st.caption("Model · Gemini 1.5 Flash")
+        st.caption("Model · Gemini 2.5 Flash")
         st.caption("Embedding · all-MiniLM-L6-v2 (384-dim)")
 
 
-# ---------------- Main App ----------------
+def render_chat_interface():
+    extractor = CitationExtractor()
+
+    comparison_handler = ComparisonHandler(
+        st.session_state.vector_store,
+        st.session_state.embedding_generator
+    )
+
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+            if message["role"] == "assistant":
+                render_citation_chips(message.get("citations", []))
+
+    if query := st.chat_input("Ask a question about the ESG reports..."):
+
+        st.session_state.chat_history.append(
+            {"role": "user", "content": query, "citations": []}
+        )
+
+        with st.chat_message("user"):
+            st.markdown(query)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Analyzing reports..."):
+
+                try:
+                    if comparison_handler.is_comparison_question(query):
+                        st.caption("🔍 Detected a comparison question — retrieving per-company context")
+                        result = comparison_handler.query(query, k=st.session_state.k_value)
+                    else:
+                        result = st.session_state.rag_pipeline.query(
+                            query, k=st.session_state.k_value
+                        )
+
+                    answer_text = result["answer"]
+                    citations = extractor.extract_citations(answer_text)
+
+                    st.markdown(answer_text)
+                    render_citation_chips(citations)
+
+                    with st.expander("📄 View retrieved source context"):
+                        st.text(result["context"])
+
+                except Exception as e:
+                    answer_text = f"⚠️ Something went wrong while generating an answer: {e}"
+                    citations = []
+                    st.error(answer_text)
+
+        st.session_state.chat_history.append(
+            {"role": "assistant", "content": answer_text, "citations": citations}
+        )
+
 
 def main():
     load_css()
@@ -275,6 +263,7 @@ def main():
     render_hero()
 
     embedding_generator = load_embedding_generator()
+    st.session_state.embedding_generator = embedding_generator
 
     if st.session_state.rag_pipeline is None and os.path.exists("data/vector_db/index.faiss"):
         load_existing_database(embedding_generator)
