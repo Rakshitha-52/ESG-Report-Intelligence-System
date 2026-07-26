@@ -93,59 +93,106 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
 
+    valid_files = []
+
+    # Save only valid PDF files
     for uploaded_file in uploaded_files:
-        with open(pdf_dir / uploaded_file.name, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+        if not uploaded_file.name.lower().endswith(".pdf"):
+            st.warning(
+                f"Skipped {uploaded_file.name} — not a PDF file."
+            )
+            continue
 
-    with st.spinner("Extracting text from PDFs..."):
-        loader = PDFLoader(str(pdf_dir))
-        documents = loader.load_all_pdfs()
+        try:
+            with open(pdf_dir / uploaded_file.name, "wb") as f:
+                f.write(uploaded_file.getbuffer())
 
+            valid_files.append(uploaded_file.name)
+
+        except Exception as e:
+            st.error(
+                f"Could not save {uploaded_file.name}: {e}"
+            )
+
+    if not valid_files:
+        st.error("No valid PDF files to process.")
+        return
+
+    # Extract text from PDFs
+    try:
+        with st.spinner("Extracting text from PDFs..."):
+            loader = PDFLoader(str(pdf_dir))
+            documents = loader.load_all_pdfs()
+
+    except Exception as e:
+        st.error(
+            f"Failed to extract text from PDFs: {e}"
+        )
+        return
+
+    if not documents:
+        st.error(
+            "No extractable text found in the uploaded PDF(s). "
+            "The file(s) may be scanned images without a text layer."
+        )
+        return
+
+    # ----------------------------------------------------------
+    # Rest of the pipeline (same as Day 5)
+    # Wrap each stage in try-except if you want the app to
+    # fail gracefully during cleaning, chunking, embedding,
+    # and indexing.
+    # ----------------------------------------------------------
+
+    # Cleaning
     with st.spinner("Cleaning text..."):
         preprocessor = TextPreprocessor()
         cleaned_docs = preprocessor.preprocess_documents(documents)
 
+    # Chunking
     with st.spinner("Chunking documents..."):
-        chunker = DocumentChunker(chunk_size=1000, chunk_overlap=200)
+        chunker = DocumentChunker(
+            chunk_size=1000,
+            chunk_overlap=200
+        )
         chunks = chunker.chunk_documents(cleaned_docs)
 
+    # Embedding
     with st.spinner(f"Generating embeddings for {len(chunks)} chunks..."):
         texts = [chunk["text"] for chunk in chunks]
         metadatas = [chunk["metadata"] for chunk in chunks]
-        embeddings = embedding_generator.embed_batch(texts, show_progress=False)
 
+        embeddings = embedding_generator.embed_batch(
+            texts,
+            show_progress=False
+        )
+
+    # Build vector store
     with st.spinner("Building vector database..."):
-        vector_store = FAISSVectorStore(embedding_dim=embedding_generator.embedding_dim)
-        vector_store.add_documents(texts, embeddings, metadatas)
+        vector_store = FAISSVectorStore(
+            embedding_dim=embedding_generator.embedding_dim
+        )
+
+        vector_store.add_documents(
+            texts,
+            embeddings,
+            metadatas
+        )
+
         vector_store.save("data/vector_db")
 
     st.session_state.vector_store = vector_store
+
     st.session_state.rag_pipeline = ESGRAGPipeline(
         vector_store=vector_store,
         embedding_generator=embedding_generator
     )
 
-    st.success(f"✅ Processed {len(uploaded_files)} PDF(s) into {len(chunks)} chunks")
-
-
-def load_existing_database(embedding_generator):
-    if not os.path.exists("data/vector_db/index.faiss"):
-        st.error("No existing database found. Upload and process PDFs first.")
-        return
-
-    with st.spinner("Loading existing vector database..."):
-        vector_store = FAISSVectorStore(embedding_dim=embedding_generator.embedding_dim)
-        vector_store.load("data/vector_db")
-
-    st.session_state.vector_store = vector_store
-    st.session_state.rag_pipeline = ESGRAGPipeline(
-        vector_store=vector_store,
-        embedding_generator=embedding_generator
+    st.success(
+        f"✅ Processed {len(valid_files)} PDF(s) into {len(chunks)} chunks."
     )
 
-    st.success(f"✅ Loaded {vector_store.index.ntotal} chunks from existing database")
-
-
+    
 def render_sidebar(embedding_generator):
     with st.sidebar:
         st.markdown("### 📄 Document Management")
