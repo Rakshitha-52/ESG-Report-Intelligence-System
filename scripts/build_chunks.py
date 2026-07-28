@@ -8,9 +8,6 @@ from ingestion.text_preprocessor import TextPreprocessor
 from ingestion.chunker import DocumentChunker
 
 
-# Fill this in based on what you noticed in Step 3's before/after inspection.
-# Leave a list empty [] if a report has no obvious repeated header text.
-
 KNOWN_HEADERS_BY_SOURCE = {
     "apple_esg_2025.pdf": ["Environmental Progress Report"],
     "apple_esg_2026.pdf": ["Environmental Progress Report"],
@@ -27,7 +24,7 @@ def main():
     loader = PDFLoader("data/pdfs")
     raw_documents = loader.load_all_pdfs()
 
-    # Clean per-document, using the right known headers for each source
+
     all_cleaned = []
 
     for source, headers in KNOWN_HEADERS_BY_SOURCE.items():
@@ -65,7 +62,7 @@ def main():
     for source, count in chunker.get_chunks_per_source(chunks).items():
         print(f"  {source}: {count} chunks")
 
-    # Save chunks to disk as JSON for Day 3
+    # Save chunks to disk as JSON 
     output_path = "data/processed/chunks.json"
 
     with open(output_path, "w", encoding="utf-8") as f:

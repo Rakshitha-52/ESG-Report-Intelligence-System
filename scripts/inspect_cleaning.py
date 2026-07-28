@@ -6,7 +6,7 @@ loader	=	PDFLoader("data/pdfs")
 documents	=	loader.load_all_pdfs()
 preprocessor	=	TextPreprocessor()
 cleaned_docs	=	preprocessor.preprocess_documents(documents)
-#	Group	by	source	file,	print	one	BEFORE/AFTER	sample	per	document
+
 seen_sources	=	set()
 for	raw,	clean	in	zip(documents,	cleaned_docs):
 				source	=	raw["metadata"]["source"]

@@ -15,7 +15,7 @@ from retrieval.vector_store_faiss import FAISSVectorStore
 
 
 def main():
-    # 1. Load chunks from Day 2
+    # 1. Load chunks 
     with open("data/processed/chunks.json", "r", encoding="utf-8") as f:
         chunks = json.load(f)
 
