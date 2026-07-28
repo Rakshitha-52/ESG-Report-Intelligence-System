@@ -1,12 +1,12 @@
 """
 ESG Report Intelligence System - Streamlit Application
 
-Main entry point. Provides PDF upload, chat-based Q&A, and cited
+Provides PDF upload, chat-based Q&A, and cited
 answers powered by the RAG pipeline (FAISS + Gemini).
 
-Run with: streamlit run app.py
 """
 
+import textwrap
 import streamlit as st
 import os
 import sys
@@ -42,19 +42,17 @@ def load_css():
 
 
 def render_hero():
-    st.markdown(
-        """
+    html = """
         <div class="esg-hero">
-            <div class="esg-hero-eyebrow">Retrieval-Augmented Analysis </div>
+            <div class="esg-hero-eyebrow">Retrieval-Augmented ESG Analysis</div>
             <div class="esg-hero-title">ESG Report Intelligence</div>
             <div class="esg-hero-sub">
-                Ask questions across sustainability reports. Every answer is grounded in the source text and cited
-                by document and page.
+                Ask questions across sustainability reports. Every answer is grounded
+                in the source text and cited by document and page.
             </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    """
+    st.markdown(textwrap.dedent(html), unsafe_allow_html=True)
 
 
 def render_citation_chips(citations):
@@ -83,6 +81,8 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "k_value" not in st.session_state:
     st.session_state.k_value = 5
+if "just_processed" not in st.session_state:
+    st.session_state.just_processed = False
 
 
 # ---------------- Cached Resources ----------------
@@ -119,7 +119,7 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         return
 
     try:
-        with st.spinner("Extracting text from PDFs..."):
+        with st.spinner("Extracting text from PDFs... this can take a few minutes for long reports."):
             loader = PDFLoader(str(pdf_dir))
             documents = loader.load_all_pdfs()
     except Exception as e:
@@ -157,17 +157,17 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         embedding_generator=embedding_generator
     )
 
-    st.success(f"✅ Processed {len(valid_files)} PDF(s) into {len(chunks)} chunks.")
-    st.session_state.chat_history	=	[]
+    # Clear stale chat history from a previous document set, and flag
+    # that a "ready to ask" notification should show on the next render.
+    st.session_state.chat_history = []
+    st.session_state.just_processed = True
+
+    st.toast(f"✅ Processed {len(valid_files)} PDF(s) into {len(chunks)} chunks", icon="🎉")
     st.rerun()
 
 
 def load_existing_database(embedding_generator):
-    """Load a previously built vector database from disk, if present.
-
-    This is what powers both the sidebar's 'Load Existing Database'
-    button and the automatic startup load in main().
-    """
+    """Load a previously built vector database from disk, if present."""
     if not os.path.exists("data/vector_db/index.faiss"):
         st.error("No existing database found. Upload and process PDFs first.")
         return
@@ -188,28 +188,13 @@ def load_existing_database(embedding_generator):
 # ---------------- UI Sections ----------------
 
 def render_sidebar(embedding_generator):
+    """Sidebar now only handles loading an existing database and settings.
+    Uploading new documents lives in the main tab (render_upload_section)."""
     with st.sidebar:
-        st.markdown("### 📄 Document Management")
+        st.markdown("### 📂 Existing Database")
 
-        db_mode = st.radio(
-            "Vector database",
-            ["Load existing database", "Create new from uploads"],
-            index=0
-        )
-
-        if db_mode == "Create new from uploads":
-            uploaded_files = st.file_uploader(
-                "Upload ESG Reports (PDF)",
-                type=["pdf"],
-                accept_multiple_files=True
-            )
-
-            if uploaded_files and st.button("Process Documents", type="primary"):
-                process_uploaded_pdfs(uploaded_files, embedding_generator)
-
-        else:
-            if st.button("Load Existing Database", type="primary"):
-                load_existing_database(embedding_generator)
+        if st.button("Load Existing Database", type="primary"):
+            load_existing_database(embedding_generator)
 
         st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
 
@@ -224,7 +209,6 @@ def render_sidebar(embedding_generator):
             st.caption("No documents loaded yet.")
 
         st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
-
         st.markdown("### ⚙️ Settings")
 
         st.session_state.k_value = st.slider(
@@ -237,6 +221,51 @@ def render_sidebar(embedding_generator):
 
         st.caption("Model · Gemini 2.5 Flash")
         st.caption("Embedding · all-MiniLM-L6-v2 (384-dim)")
+
+
+def render_upload_section(embedding_generator):
+    """Upload + process new ESG PDFs, shown in the main tab as a
+    styled card rather than tucked away in the sidebar."""
+    st.markdown(
+        """
+        <div class="esg-upload-card">
+            <div class="esg-upload-header">
+                <span class="esg-upload-icon">📤</span>
+                <span class="esg-upload-title">Add New ESG Reports</span>
+            </div>
+            <div class="esg-upload-sub">
+                Upload one or more sustainability PDFs to add them to the searchable database.
+                Longer reports may take a few minutes to process.
+            </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    uploaded_files = st.file_uploader(
+        "Upload ESG Reports (PDF)",
+        type=["pdf"],
+        accept_multiple_files=True,
+        label_visibility="collapsed"
+    )
+
+    if uploaded_files and st.button("📤 Process Documents", type="primary"):
+        process_uploaded_pdfs(uploaded_files, embedding_generator)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def render_ready_banner():
+    """One-time, prominent confirmation shown right after processing
+    completes, so the user isn't left guessing whether it's safe to ask
+    questions yet."""
+    if st.session_state.just_processed:
+        st.markdown(
+            '<div class="esg-ready-banner">✅ '
+            '<strong>Ready!</strong>&nbsp; Your documents are processed — '
+            'ask a question in the chat below.</div>',
+            unsafe_allow_html=True
+        )
+        st.session_state.just_processed = False
 
 
 def render_chat_interface():
@@ -313,8 +342,15 @@ def main():
 
     render_sidebar(embedding_generator)
 
+    # Upload section always visible in the main tab, above the chat -
+    # lets users add more documents even after a database is loaded.
+    with st.expander("📤 Add more documents", expanded=not st.session_state.rag_pipeline):
+        render_upload_section(embedding_generator)
+
+    render_ready_banner()
+
     if not st.session_state.rag_pipeline:
-        st.markdown("👈 Upload ESG PDF reports in the sidebar, or load your existing database, to get started.")
+        st.markdown("👈 Load your existing database from the sidebar, or upload PDFs above, to get started.")
         st.markdown("**Example questions once documents are loaded:**")
         for q in [
             "What is the carbon neutrality target?",

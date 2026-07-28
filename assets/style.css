@@ -166,3 +166,67 @@ html, body, [class*="css"] {
     border-top: 1px solid var(--line);
     margin: 1.2rem 0;
 }
+
+/* ---------- Upload section (main tab) ---------- */
+.esg-upload-card {
+    background: var(--paper-raised);
+    border: 1.5px dashed var(--moss);
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.2rem;
+}
+
+.esg-upload-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.3rem;
+}
+
+.esg-upload-icon {
+    font-size: 1.4rem;
+}
+
+.esg-upload-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.15rem;
+    color: var(--forest-dark);
+}
+
+.esg-upload-sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.9rem;
+}
+
+/* Restyle Streamlit's native file uploader to match the paper theme */
+[data-testid="stFileUploader"] {
+    background: var(--paper);
+    border-radius: 8px;
+    padding: 0.4rem;
+}
+
+[data-testid="stFileUploaderDropzone"] {
+    background: var(--paper) !important;
+    border: 1px dashed var(--line) !important;
+}
+
+/* ---------- Ready-to-ask banner ---------- */
+.esg-ready-banner {
+    background: var(--forest);
+    color: var(--paper) !important;
+    border-radius: 8px;
+    padding: 0.8rem 1.1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.92rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.esg-ready-banner * {
+    color: var(--paper) !important;
+}
