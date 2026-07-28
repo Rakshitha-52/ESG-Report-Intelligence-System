@@ -45,16 +45,22 @@ def render_hero():
     st.markdown(
         """
         <div class="esg-hero">
-            <div class="esg-hero-eyebrow">Retrieval-Augmented Analysis · 8 Reports · 5 Companies</div>
-            <div class="esg-hero-title">ESG Report Intelligence</div>
+            <div class="esg-hero-eyebrow">
+                Retrieval-Augmented ESG Analysis
+            </div>
+
+            <div class="esg-hero-title">
+                ESG Report Intelligence
+            </div>
+
             <div class="esg-hero-sub">
-                Ask questions across sustainability reports from Apple, Google, Microsoft,
-                Reliance, and Tata. Every answer is grounded in the source text and cited
-                by document and page.
+                Ask questions across sustainability reports.
+                Every answer is grounded in the source text
+                and cited by document and page.
             </div>
         </div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
 
@@ -158,7 +164,9 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         embedding_generator=embedding_generator
     )
 
-    st.success(f"✅ Processed {len(valid_files)} PDF(s) into {len(chunks)} chunks.")
+    st.success(f" Processed {len(valid_files)} PDF(s) into {len(chunks)} chunks.")
+    st.session_state.chat_history	=	[]
+    st.rerun()
 
 
 def load_existing_database(embedding_generator):
