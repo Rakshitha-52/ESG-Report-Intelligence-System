@@ -1,6 +1,5 @@
 """
 End-to-end RAG pipeline test: retrieval -> Gemini -> citations.
-Run this after Steps 5 and 6 are both complete.
 """
 
 import sys

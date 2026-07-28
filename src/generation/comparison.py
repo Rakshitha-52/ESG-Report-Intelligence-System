@@ -13,7 +13,7 @@ import google.generativeai as genai
 
 # Maps a spoken company name to the filename fragments that identify
 # its reports in your vector store's metadata["source"] field.
-# Update this if your actual filenames differ.
+
 COMPANY_SOURCE_MAP = {
     "apple": [
         "apple_esg_2025.pdf",
@@ -130,8 +130,7 @@ ANSWER:
             valid_sources = set(COMPANY_SOURCE_MAP.get(company, []))
 
             # Over-fetch, then filter by source, then trim to k.
-            # This is simple and explainable for a small dataset.
-            # In production, FAISS metadata filtering would be preferable.
+            
             raw_results = self.vector_store.search(
                 query_embedding,
                 k=k * 5,

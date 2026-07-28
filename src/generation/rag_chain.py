@@ -1,7 +1,7 @@
 """
 RAG Pipeline Module (Gemini-powered)
 
-Combines Day 3's retrieval system with Google's Gemini API to
+Combines retrieval system with Google's Gemini API to
 produce grounded, cited answers to ESG questions - at zero cost
 on the free tier.
 """

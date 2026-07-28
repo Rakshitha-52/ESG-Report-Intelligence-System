@@ -51,7 +51,7 @@ class CitationExtractor:
 
 
 if __name__ == "__main__":
-    # Test against BOTH formats to confirm the fix covers what you saw
+    
     combined_bracket_answer = (
         "Google announced the pursuit of a 100% renewable energy match "
         "[Source: google_esg_2025.pdf, Page 29; Source: google_esg_2026.pdf, Page 28]."
