@@ -326,7 +326,7 @@ def render_chat_interface():
 # ---------------- Main App ----------------
 
 def main():
-    load_css()
+    #load_css()
 
     if not os.getenv("GOOGLE_API_KEY"):
         st.error("⚠️ GOOGLE_API_KEY not found. Add it to your .env file and restart the app.")
