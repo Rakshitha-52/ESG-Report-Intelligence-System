@@ -1,232 +1,160 @@
-/* ============================================================
-   ESG Report Intelligence — Visual Identity
-   Palette: paper / ink / forest / moss / gold
-   Type: Fraunces (display) · Inter (body) · Space Mono (data/citations)
-   ============================================================ */
-
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
-
-:root {
-    --paper: #F5F3EC;
-    --paper-raised: #FFFFFF;
-    --ink: #1E2A24;
-    --ink-soft: #4A574F;
-    --forest: #2F5D50;
-    --forest-dark: #24463C;
-    --moss: #6B8F71;
-    --gold: #B8862E;
-    --gold-soft: #E8D9B8;
-    --line: #DDD8C8;
+@import	url('https://fonts.googleapis.com/css2?
+family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&displa
+:root	{
+				--paper:	#F5F3EC;
+				--paper-raised:	#FFFFFF;
+				--ink:	#1E2A24;
+				--ink-soft:	#4A574F;
+				--forest:	#2F5D50;
+				--forest-dark:	#24463C;
+				--moss:	#6B8F71;
+				--gold:	#B8862E;
+				--gold-soft:	#E8D9B8;
+				--line:	#DDD8C8;
+}
+html,	body,	[class*="css"]	{
+				font-family:	'Inter',	sans-serif;
+}
+/*	Keep	this	one	targeted	override	-	Streamlit's	automatic	sidebar
+			text	contrast	doesn't	reliably	land	on	our	exact	paper	tone.	*/
+[data-testid="stSidebar"]	*	{
+				color:	var(--paper)	!important;
+}
+/*	----------	Hero	header	----------	*/
+.esg-hero	{
+				padding:	2rem	0	1.25rem	0;
+				border-bottom:	2px	solid	var(--forest);
+				margin-bottom:	1.5rem;
+}
+.esg-hero-eyebrow	{
+				font-family:	'Space	Mono',	monospace;
+				font-size:	0.72rem;
+				letter-spacing:	0.12em;
+				text-transform:	uppercase;
+				color:	var(--moss);
+				margin-bottom:	0.4rem;
+}
+.esg-hero-title	{
+				font-family:	'Fraunces',	serif;
+				font-weight:	600;
+				font-size:	2.4rem;
+				line-height:	1.1;
+				color:	var(--forest-dark);
+				margin:	0;
 }
 
-/* ---------- Base canvas ---------- */
-.stApp {
-    background: var(--paper);
+.esg-hero-sub	{
+				font-family:	'Inter',	sans-serif;
+				font-size:	0.98rem;
+				color:	var(--ink-soft);
+				margin-top:	0.5rem;
+				max-width:	640px;
 }
-
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-    color: var(--ink);
+/*	----------	Citation	chips	(signature	element)	----------	*/
+.esg-citation-row	{
+				display:	flex;
+				flex-wrap:	wrap;
+				gap:	0.4rem;
+				margin:	0.7rem	0	0.2rem	0;
 }
-
-/* ---------- Sidebar ---------- */
-[data-testid="stSidebar"] {
-    background: var(--forest-dark);
-    border-right: 1px solid var(--line);
+.esg-citation-chip	{
+				font-family:	'Space	Mono',	monospace;
+				font-size:	0.76rem;
+				color:	var(--forest-dark);
+				background:	var(--gold-soft);
+				border:	1px	solid	var(--gold);
+				border-radius:	999px;
+				padding:	0.22rem	0.7rem;
+				white-space:	nowrap;
 }
-
-[data-testid="stSidebar"] * {
-    color: var(--paper) !important;
+.esg-citation-chip	.esg-page	{
+				color:	var(--gold);
+				font-weight:	700;
 }
-
-[data-testid="stSidebar"] .stButton button {
-    background: var(--gold);
-    color: var(--ink) !important;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    transition: transform 0.12s ease, background 0.12s ease;
+.esg-no-citation	{
+				font-family:	'Space	Mono',	monospace;
+				font-size:	0.78rem;
+				color:	#A65D3B;
+				background:	#FBEDE7;
+				border:	1px	solid	#E4B7A3;
+				border-radius:	6px;
+				padding:	0.3rem	0.6rem;
+				display:	inline-block;
+				margin-top:	0.5rem;
 }
-
-[data-testid="stSidebar"] .stButton button:hover {
-    background: #CC9A3F;
-    transform: translateY(-1px);
+/*	----------	Status	pills,	example	cards	----------	*/
+.esg-status-pill	{
+				font-family:	'Space	Mono',	monospace;
+				font-size:	0.75rem;
+				background:	rgba(184,	134,	46,	0.15);
+				border:	1px	solid	var(--gold);
+				color:	var(--paper);
+				border-radius:	999px;
+				padding:	0.3rem	0.75rem;
+				display:	inline-block;
+				margin-bottom:	0.4rem;
 }
-
-[data-testid="stSidebar"] hr {
-    border-color: rgba(245, 243, 236, 0.15);
+.esg-example-card	{
+				background:	var(--paper-raised);
+				border:	1px	solid	var(--line);
+				border-left:	3px	solid	var(--forest);
+				border-radius:	6px;
+				padding:	0.7rem	1rem;
+				margin-bottom:	0.5rem;
+				font-size:	0.92rem;
+				color:	var(--ink-soft);
 }
-
-/* ---------- Hero header ---------- */
-.esg-hero {
-    padding: 2rem 0 1.25rem 0;
-    border-bottom: 2px solid var(--forest);
-    margin-bottom: 1.5rem;
+.esg-divider	{
+				border:	none;
+				border-top:	1px	solid	var(--line);
+				margin:	1.2rem	0;
 }
-
-.esg-hero-eyebrow {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--moss);
-    margin-bottom: 0.4rem;
+/*	----------	Upload	card	(main	tab)	----------	*/
+.esg-upload-card	{
+				background:	var(--paper-raised);
+				border:	1.5px	dashed	var(--moss);
+				border-radius:	12px;
+				padding:	1.4rem	1.6rem;
+				margin-bottom:	1.2rem;
 }
-
-.esg-hero-title {
-    font-family: 'Fraunces', serif;
-    font-weight: 600;
-    font-size: 2.4rem;
-    line-height: 1.1;
-    color: var(--forest-dark);
-    margin: 0;
+.esg-upload-header	{
+				display:	flex;
+				align-items:	center;
+				gap:	0.6rem;
+				margin-bottom:	0.3rem;
 }
-
-.esg-hero-sub {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.98rem;
-    color: var(--ink-soft);
-    margin-top: 0.5rem;
-    max-width: 640px;
+.esg-upload-icon	{
+				font-size:	1.4rem;
 }
-
-/* ---------- Chat bubbles ---------- */
-[data-testid="stChatMessage"] {
-    background: var(--paper-raised);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 0.4rem 0.2rem;
-    margin-bottom: 0.6rem;
+.esg-upload-title	{
+				font-family:	'Fraunces',	serif;
+				font-weight:	600;
+				font-size:	1.15rem;
+color:	var(--forest-dark);
 }
-
-/* ---------- Citation chips (signature element) ---------- */
-.esg-citation-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin: 0.7rem 0 0.2rem 0;
+.esg-upload-sub	{
+				font-family:	'Inter',	sans-serif;
+				font-size:	0.85rem;
+				color:	var(--ink-soft);
+				margin-bottom:	0.9rem;
 }
-
-.esg-citation-chip {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.76rem;
-    color: var(--forest-dark);
-    background: var(--gold-soft);
-    border: 1px solid var(--gold);
-    border-radius: 999px;
-    padding: 0.22rem 0.7rem;
-    white-space: nowrap;
+[data-testid="stFileUploaderDropzone"]	{
+				background:	var(--paper)	!important;
+				border:	1px	dashed	var(--line)	!important;
 }
-
-.esg-citation-chip .esg-page {
-    color: var(--gold);
-    font-weight: 700;
+/*	----------	Ready-to-ask	banner	----------	*/
+.esg-ready-banner	{
+				background:	var(--forest);
+				color:	var(--paper)	!important;
+				border-radius:	8px;
+				padding:	0.8rem	1.1rem;
+				font-family:	'Inter',	sans-serif;
+				font-size:	0.92rem;
+				margin-bottom:	1rem;
+				display:	flex;
+				align-items:	center;
+				gap:	0.5rem;
 }
-
-.esg-no-citation {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.78rem;
-    color: #A65D3B;
-    background: #FBEDE7;
-    border: 1px solid #E4B7A3;
-    border-radius: 6px;
-    padding: 0.3rem 0.6rem;
-    display: inline-block;
-    margin-top: 0.5rem;
-}
-
-/* ---------- Status pills (doc count, model info) ---------- */
-.esg-status-pill {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.75rem;
-    background: rgba(184, 134, 46, 0.15);
-    border: 1px solid var(--gold);
-    color: var(--paper);
-    border-radius: 999px;
-    padding: 0.3rem 0.75rem;
-    display: inline-block;
-    margin-bottom: 0.4rem;
-}
-
-/* ---------- Example question cards ---------- */
-.esg-example-card {
-    background: var(--paper-raised);
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--forest);
-    border-radius: 6px;
-    padding: 0.7rem 1rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.92rem;
-    color: var(--ink-soft);
-}
-
-/* ---------- Divider ---------- */
-.esg-divider {
-    border: none;
-    border-top: 1px solid var(--line);
-    margin: 1.2rem 0;
-}
-
-/* ---------- Upload section (main tab) ---------- */
-.esg-upload-card {
-    background: var(--paper-raised);
-    border: 1.5px dashed var(--moss);
-    border-radius: 12px;
-    padding: 1.4rem 1.6rem;
-    margin-bottom: 1.2rem;
-}
-
-.esg-upload-header {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 0.3rem;
-}
-
-.esg-upload-icon {
-    font-size: 1.4rem;
-}
-
-.esg-upload-title {
-    font-family: 'Fraunces', serif;
-    font-weight: 600;
-    font-size: 1.15rem;
-    color: var(--forest-dark);
-}
-
-.esg-upload-sub {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
-    color: var(--ink-soft);
-    margin-bottom: 0.9rem;
-}
-
-/* Restyle Streamlit's native file uploader to match the paper theme */
-[data-testid="stFileUploader"] {
-    background: var(--paper);
-    border-radius: 8px;
-    padding: 0.4rem;
-}
-
-[data-testid="stFileUploaderDropzone"] {
-    background: var(--paper) !important;
-    border: 1px dashed var(--line) !important;
-}
-
-/* ---------- Ready-to-ask banner ---------- */
-.esg-ready-banner {
-    background: var(--forest);
-    color: var(--paper) !important;
-    border-radius: 8px;
-    padding: 0.8rem 1.1rem;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.92rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.esg-ready-banner * {
-    color: var(--paper) !important;
+.esg-ready-banner	*	{
+				color:	var(--paper)	!important;
 }
