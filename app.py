@@ -95,8 +95,8 @@ def load_embedding_generator():
 # ---------------- Pipeline Functions ----------------
 
 def process_uploaded_pdfs(uploaded_files, embedding_generator):
-    """Run the full ingestion pipeline on newly uploaded PDFs, with
-    defensive error handling for bad files or extraction failures."""
+    """Process only newly uploaded PDFs and append them to the existing
+    vector database, rather than rebuilding from every file on disk."""
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
 
@@ -129,7 +129,7 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         st.info(f"Already indexed, skipped: {', '.join(skipped_duplicates)}")
 
     if not valid_files:
-        st.error("No valid PDF files to process.")
+        st.error("No new valid PDF files to process.")
         return
 
     loader = PDFLoader(str(pdf_dir))
@@ -160,13 +160,19 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         chunker = DocumentChunker(chunk_size=1000, chunk_overlap=200)
         chunks = chunker.chunk_documents(cleaned_docs)
 
-    with st.spinner(f"Generating embeddings for {len(chunks)} chunks..."):
-        texts = [chunk["text"] for chunk in chunks]
-        metadatas = [chunk["metadata"] for chunk in chunks]
+    with st.spinner(f"Generating embeddings for {len(chunks)} new chunks..."):
+        texts = [c["text"] for c in chunks]
+        metadatas = [c["metadata"] for c in chunks]
         embeddings = embedding_generator.embed_batch(texts, show_progress=False)
 
-    with st.spinner("Building vector database..."):
-        vector_store = FAISSVectorStore(embedding_dim=embedding_generator.embedding_dim)
+    with st.spinner("Updating vector database..."):
+        if st.session_state.vector_store is not None:
+            vector_store = st.session_state.vector_store
+        else:
+            vector_store = FAISSVectorStore(embedding_dim=embedding_generator.embedding_dim)
+            if os.path.exists("data/vector_db/index.faiss"):
+                vector_store.load("data/vector_db")
+
         vector_store.add_documents(texts, embeddings, metadatas)
         vector_store.save("data/vector_db")
 
@@ -176,15 +182,15 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         embedding_generator=embedding_generator
     )
 
-    # Clear stale chat history from a previous document set, and flag
-    # that a "ready to ask" notification should show on the next render.
     st.session_state.chat_history = []
     st.session_state.just_processed = True
 
-    st.toast(f"✅ Processed {len(valid_files)} PDF(s) into {len(chunks)} chunks", icon="🎉")
+    st.toast(
+        f"✅ Added {len(valid_files)} new PDF(s) ({len(chunks)} chunks) to the database",
+        icon="🎉"
+    )
     st.rerun()
-
-
+    
 def load_existing_database(embedding_generator):
     """Load a previously built vector database from disk, if present."""
     if not os.path.exists("data/vector_db/index.faiss"):
