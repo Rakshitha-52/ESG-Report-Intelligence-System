@@ -100,11 +100,22 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
 
+    already_indexed = set()
+    if st.session_state.vector_store is not None:
+        already_indexed = {
+            m.get("source") for m in st.session_state.vector_store.metadatas
+        }
+
     valid_files = []
+    skipped_duplicates = []
 
     for uploaded_file in uploaded_files:
         if not uploaded_file.name.lower().endswith(".pdf"):
             st.warning(f"Skipped {uploaded_file.name} — not a PDF file.")
+            continue
+
+        if uploaded_file.name in already_indexed:
+            skipped_duplicates.append(uploaded_file.name)
             continue
 
         try:
@@ -113,6 +124,9 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
             valid_files.append(uploaded_file.name)
         except Exception as e:
             st.error(f"Could not save {uploaded_file.name}: {e}")
+
+    if skipped_duplicates:
+        st.info(f"Already indexed, skipped: {', '.join(skipped_duplicates)}")
 
     if not valid_files:
         st.error("No valid PDF files to process.")
