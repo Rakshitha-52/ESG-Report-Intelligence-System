@@ -132,17 +132,22 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         st.error("No valid PDF files to process.")
         return
 
+    loader = PDFLoader(str(pdf_dir))
+    documents = []
+
     try:
-        with st.spinner("Extracting text from PDFs... this can take a few minutes for long reports."):
-            loader = PDFLoader(str(pdf_dir))
-            documents = loader.load_all_pdfs()
+        with st.spinner(f"Extracting text from {len(valid_files)} new file(s)..."):
+            for filename in valid_files:
+                file_path = pdf_dir / filename
+                docs = loader.load_single_pdf(str(file_path))
+                documents.extend(docs)
     except Exception as e:
-        st.error(f"Failed to extract text from PDFs: {e}")
+        st.error(f"Failed to extract text: {e}")
         return
 
     if not documents:
         st.error(
-            "No extractable text found in the uploaded PDF(s). "
+            "No extractable text found in the new PDF(s). "
             "The file(s) may be scanned images without a text layer."
         )
         return
