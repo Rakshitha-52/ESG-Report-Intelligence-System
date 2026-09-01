@@ -5,9 +5,7 @@ AI-powered **Retrieval-Augmented Generation (RAG)** system for analyzing Environ
 **Live Demo:** [(https://esg-report-intelligence-system-l3kscjdsrpjtsiewprptwu.streamlit.app/)]
 
 ---
-![ESG Report Intelligence System](App_preview/App_preview1.png)
-![ESG Report Intelligence System](App_preview/app_preview2.png)
-![ESG Report Intelligence System](App_preview/Retreived_answers.png)
+![ESG Report Intelligence System](App_preview/Preview1.png)
 
 # Overview
 
