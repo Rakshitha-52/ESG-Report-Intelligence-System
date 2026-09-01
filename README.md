@@ -2,7 +2,7 @@
 
 AI-powered **Retrieval-Augmented Generation (RAG)** system for analyzing Environmental, Social, and Governance (ESG) reports with **grounded, cited answers** and **cross-company comparison**.
 
-**Live Demo:** [your-streamlit-app-url-here]
+**Live Demo:** [(https://esg-report-intelligence-system-l3kscjdsrpjtsiewprptwu.streamlit.app/)]
 
 ---
 
