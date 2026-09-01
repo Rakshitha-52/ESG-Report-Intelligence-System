@@ -1,9 +1,10 @@
 """
 ESG Report Intelligence System - Streamlit Application
 
-Provides PDF upload, chat-based Q&A, and cited
+Main entry point. Provides PDF upload, chat-based Q&A, and cited
 answers powered by the RAG pipeline (FAISS + Gemini).
 
+Run with: streamlit run app.py
 """
 
 import textwrap
@@ -95,27 +96,16 @@ def load_embedding_generator():
 # ---------------- Pipeline Functions ----------------
 
 def process_uploaded_pdfs(uploaded_files, embedding_generator):
-    """Process only newly uploaded PDFs and append them to the existing
-    vector database, rather than rebuilding from every file on disk."""
+    """Run the full ingestion pipeline on newly uploaded PDFs, with
+    defensive error handling for bad files or extraction failures."""
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
 
-    already_indexed = set()
-    if st.session_state.vector_store is not None:
-        already_indexed = {
-            m.get("source") for m in st.session_state.vector_store.metadatas
-        }
-
     valid_files = []
-    skipped_duplicates = []
 
     for uploaded_file in uploaded_files:
         if not uploaded_file.name.lower().endswith(".pdf"):
             st.warning(f"Skipped {uploaded_file.name} — not a PDF file.")
-            continue
-
-        if uploaded_file.name in already_indexed:
-            skipped_duplicates.append(uploaded_file.name)
             continue
 
         try:
@@ -125,29 +115,21 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         except Exception as e:
             st.error(f"Could not save {uploaded_file.name}: {e}")
 
-    if skipped_duplicates:
-        st.info(f"Already indexed, skipped: {', '.join(skipped_duplicates)}")
-
     if not valid_files:
-        st.error("No new valid PDF files to process.")
+        st.error("No valid PDF files to process.")
         return
 
-    loader = PDFLoader(str(pdf_dir))
-    documents = []
-
     try:
-        with st.spinner(f"Extracting text from {len(valid_files)} new file(s)..."):
-            for filename in valid_files:
-                file_path = pdf_dir / filename
-                docs = loader.load_single_pdf(str(file_path))
-                documents.extend(docs)
+        with st.spinner("Extracting text from PDFs... this can take a few minutes for long reports."):
+            loader = PDFLoader(str(pdf_dir))
+            documents = loader.load_all_pdfs()
     except Exception as e:
-        st.error(f"Failed to extract text: {e}")
+        st.error(f"Failed to extract text from PDFs: {e}")
         return
 
     if not documents:
         st.error(
-            "No extractable text found in the new PDF(s). "
+            "No extractable text found in the uploaded PDF(s). "
             "The file(s) may be scanned images without a text layer."
         )
         return
@@ -160,19 +142,13 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         chunker = DocumentChunker(chunk_size=1000, chunk_overlap=200)
         chunks = chunker.chunk_documents(cleaned_docs)
 
-    with st.spinner(f"Generating embeddings for {len(chunks)} new chunks..."):
-        texts = [c["text"] for c in chunks]
-        metadatas = [c["metadata"] for c in chunks]
+    with st.spinner(f"Generating embeddings for {len(chunks)} chunks..."):
+        texts = [chunk["text"] for chunk in chunks]
+        metadatas = [chunk["metadata"] for chunk in chunks]
         embeddings = embedding_generator.embed_batch(texts, show_progress=False)
 
-    with st.spinner("Updating vector database..."):
-        if st.session_state.vector_store is not None:
-            vector_store = st.session_state.vector_store
-        else:
-            vector_store = FAISSVectorStore(embedding_dim=embedding_generator.embedding_dim)
-            if os.path.exists("data/vector_db/index.faiss"):
-                vector_store.load("data/vector_db")
-
+    with st.spinner("Building vector database..."):
+        vector_store = FAISSVectorStore(embedding_dim=embedding_generator.embedding_dim)
         vector_store.add_documents(texts, embeddings, metadatas)
         vector_store.save("data/vector_db")
 
@@ -182,15 +158,15 @@ def process_uploaded_pdfs(uploaded_files, embedding_generator):
         embedding_generator=embedding_generator
     )
 
+    # Clear stale chat history from a previous document set, and flag
+    # that a "ready to ask" notification should show on the next render.
     st.session_state.chat_history = []
     st.session_state.just_processed = True
 
-    st.toast(
-        f"✅ Added {len(valid_files)} new PDF(s) ({len(chunks)} chunks) to the database",
-        icon="🎉"
-    )
+    st.toast(f"✅ Processed {len(valid_files)} PDF(s) into {len(chunks)} chunks", icon="🎉")
     st.rerun()
-    
+
+
 def load_existing_database(embedding_generator):
     """Load a previously built vector database from disk, if present."""
     if not os.path.exists("data/vector_db/index.faiss"):
@@ -216,25 +192,38 @@ def render_sidebar(embedding_generator):
     """Sidebar now only handles loading an existing database and settings.
     Uploading new documents lives in the main tab (render_upload_section)."""
     with st.sidebar:
-        st.markdown("### 📂 Existing Database")
+        st.markdown(
+            '<div class="esg-sidebar-brand">🌱 ESG Intelligence</div>'
+            '<div class="esg-sidebar-brand-sub">Control Panel</div>',
+            unsafe_allow_html=True
+        )
 
-        if st.button("Load Existing Database", type="primary"):
-            load_existing_database(embedding_generator)
-
-        st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="esg-sidebar-section-label">📂 Database</div>',
+            unsafe_allow_html=True
+        )
 
         if st.session_state.vector_store:
             st.markdown(
-                f'<span class="esg-status-pill">'
-                f'{st.session_state.vector_store.index.ntotal} chunks indexed'
-                f'</span>',
+                f'<div class="esg-db-status-card">'
+                f'<div class="esg-db-status-number">{st.session_state.vector_store.index.ntotal:,}</div>'
+                f'<div class="esg-db-status-label">chunks indexed</div>'
+                f'</div>',
                 unsafe_allow_html=True
             )
         else:
-            st.caption("No documents loaded yet.")
+            st.markdown(
+                '<div class="esg-db-empty-card">No documents loaded yet</div>',
+                unsafe_allow_html=True
+            )
 
-        st.markdown('<hr class="esg-divider">', unsafe_allow_html=True)
-        st.markdown("### ⚙️ Settings")
+        if st.button("Load Existing Database", type="primary", use_container_width=True):
+            load_existing_database(embedding_generator)
+
+        st.markdown(
+            '<div class="esg-sidebar-section-label">⚙️ Settings</div>',
+            unsafe_allow_html=True
+        )
 
         st.session_state.k_value = st.slider(
             "Source chunks to retrieve",
@@ -244,8 +233,18 @@ def render_sidebar(embedding_generator):
             help="Higher values retrieve more context but may dilute focus."
         )
 
-        st.caption("Model · Gemini 2.5 Flash")
-        st.caption("Embedding · all-MiniLM-L6-v2 (384-dim)")
+        st.markdown(
+            '<div class="esg-sidebar-meta-row">'
+            '<span>Model</span><span class="esg-sidebar-meta-value">Gemini 2.5 Flash</span>'
+            '</div>'
+            '<div class="esg-sidebar-meta-row">'
+            '<span>Embedding</span><span class="esg-sidebar-meta-value">MiniLM-L6-v2</span>'
+            '</div>'
+            '<div class="esg-sidebar-meta-row">'
+            '<span>Dimensions</span><span class="esg-sidebar-meta-value">384</span>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
 
 def render_upload_section(embedding_generator):
@@ -351,7 +350,7 @@ def render_chat_interface():
 # ---------------- Main App ----------------
 
 def main():
-    #load_css()
+    load_css()
 
     if not os.getenv("GOOGLE_API_KEY"):
         st.error("⚠️ GOOGLE_API_KEY not found. Add it to your .env file and restart the app.")
