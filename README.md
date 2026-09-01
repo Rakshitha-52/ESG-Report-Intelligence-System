@@ -5,6 +5,9 @@ AI-powered **Retrieval-Augmented Generation (RAG)** system for analyzing Environ
 **Live Demo:** [(https://esg-report-intelligence-system-l3kscjdsrpjtsiewprptwu.streamlit.app/)]
 
 ---
+![ESG Report Intelligence System](App_preview/App_preview1.png)
+![ESG Report Intelligence System](App_preview/app_preview2.png)
+![ESG Report Intelligence System](App_preview/Retreived_answers.png)
 
 # Overview
 
@@ -17,6 +20,7 @@ Upload ESG/Sustainability PDF reports and ask natural language questions such as
 Every answer is grounded in the uploaded reports and includes citations (filename + page number). If the required information is not available, the system responds with **"I don't have enough information"** instead of generating unsupported answers.
 
 ---
+
 
 # Key Features
 
@@ -91,7 +95,7 @@ Standard Retrieval      Comparison Detection
 ```bash
 git clone https://github.com/Rakshitha-52/ESG-Report-Intelligence-System.git
 
-cd esg-rag-system
+cd ESG-Report-Intelligence-System
 
 python -m venv venv
 
